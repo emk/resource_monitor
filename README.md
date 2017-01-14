@@ -12,6 +12,11 @@ println!("  used: {}", res.used().unwrap());
 println!("  available: {}", res.available().unwrap());
 ```
 
+**TODO:** For most allocators, this crate will only show you a high-water
+mark, and not the currently available RAM. I'm looking at how to hook it
+into the `jemalloc` stats interface so I can report combined available
+system and allocator RAM.
+
 Patches to add new resource types and new kinds of limits (`getrlimit`,
 etc.) are very much welcome! In particular, if submitting a PR, please
 be careful to explain how the different kinds of OS limits interact, and
