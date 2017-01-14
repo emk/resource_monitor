@@ -37,13 +37,13 @@ cd resource_monitor
 cargo build
 ```
 
- ## Reading the code
+## Reading the code
 
- Start with:
+Start with:
 
- - [examples/show_resources.rs][./examples/show_resources.rs]: Example code.
- - [src/lib.rs][./src/lib.rs]: Implementation.
- - [Cargo.toml][./Cargo.toml]: Metadata decribing the package and how to
-   build it.
+- [examples/show_resources.rs](./examples/show_resources.rs): Example code.
+- [src/lib.rs](./src/lib.rs): Implementation.
+- [Cargo.toml](./Cargo.toml): Metadata decribing the package and how to
+  build it.
 
- [Rust]: https://www.rust-lang.org/
+[Rust]: https://www.rust-lang.org/
