@@ -90,7 +90,7 @@ impl Resource {
         match *self {
             Resource::Memory => {
                 let path = "/sys/fs/cgroup/memory/memory.limit_in_bytes";
-                read_file_u64(&Path::new(path))
+                read_file_u64(Path::new(path))
             }
             Resource::__Private => {
                 unreachable!("Do not use Resource::__Private")
@@ -103,7 +103,7 @@ impl Resource {
         match *self {
             Resource::Memory => {
                 let path = "/sys/fs/cgroup/memory/memory.usage_in_bytes";
-                read_file_u64(&Path::new(path))
+                read_file_u64(Path::new(path))
             }
             Resource::__Private => {
                 unreachable!("Do not use Resource::__Private")
