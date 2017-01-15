@@ -50,6 +50,34 @@ I may procrastinate on merging, sadly. :-)
 
 [backpressure]: http://ferd.ca/queues-don-t-fix-overload.html
 
+## To test what happens when memory is exhausted
+
+Install Docker and run:
+
+```sh
+./test.sh
+```
+
+This should print something like:
+
+```
+Available: 103686144
+Available: 103763968
+Available: 101666816
+Available: 99569664
+...
+Available: 13586432
+Available: 11489280
+Available: 11489280
+Available: 9392128
+Clearing
+Available: 104124416
+```
+
+See [examples/use_all_memory.rs](./examples/use_all_memory.rs) for the code
+we run.  Do not run this outside of a memory-limited container! It may crash
+your system or cause it to swap too heavily.
+
 ## What about overcommit?
 
 [Overcommit][] is when the Linux hands out virtual memory with no plan
@@ -83,34 +111,6 @@ git clone https://github.com/emk/resource_monitor.git
 cd resource_monitor
 cargo build
 ```
-
-## To test what happens when memory is exhausted
-
-Install Docker and run:
-
-```sh
-./test.sh
-```
-
-This should print something like:
-
-```
-Available: 103686144
-Available: 103763968
-Available: 101666816
-Available: 99569664
-...
-Available: 13586432
-Available: 11489280
-Available: 11489280
-Available: 9392128
-Clearing
-Available: 104124416
-```
-
-See [examples/use_all_memory.rs](./examples/use_all_memory.rs) for the code
-we run.  Do not run this outside of a memory-limited container! It may crash
-your system or cause it to swap too heavily.
 
 ## Reading the code
 
