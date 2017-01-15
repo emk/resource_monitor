@@ -48,6 +48,8 @@ be careful to explain how the different kinds of OS limits interact, and
 which limit a given process will hit first. If you make me look this up,
 I may procrastinate on merging, sadly. :-)
 
+[backpressure]: http://ferd.ca/queues-don-t-fix-overload.html
+
 ## What about overcommit?
 
 [Overcommit][] is when the Linux hands out virtual memory with no plan
