@@ -7,9 +7,9 @@
 //! ```
 //! let res = resource_monitor::Resource::Memory;
 //! println!("Memory:");
-//! println!("  limit: {:?}", res.limit().unwrap());
-//! println!("  used: {:?}", res.used().unwrap());
-//! println!("  available: {:?}", res.available().unwrap());
+//! println!("  limit: {}", res.limit().unwrap());
+//! println!("  used: {}", res.used().unwrap());
+//! println!("  available: {}", res.available().unwrap());
 //! ```
 //!
 //! Patches to add new resource types and new kinds of limits (`getrlimit`,
@@ -42,6 +42,8 @@ use errors::ResultExt;
 mod errors {
     use std::path::PathBuf;
 
+    use super::Resource;
+
     error_chain! {
         errors {
             /// An error occurred while trying to access the specified path.
@@ -53,6 +55,12 @@ mod errors {
                 // that we have to call `.display()` on path objects to
                 // get something that's valid, printable UTF-8.
                 display("could not access {}", path.display())
+            }
+            /// The requested value was not applicable.
+            NotApplicable(wanted: &'static str, r: Resource) {
+                description("requested value is not applicable to the \
+                            specified resource")
+                display("{:?}.{} is not applicable", &r, wanted)
             }
         }
     }
@@ -102,14 +110,14 @@ impl Resource {
     /// What is the maximum amount of the resource this process may consume?
     /// This will return `Ok(None)` if there is no limit imposed by this
     /// particular subsystem.
-    pub fn limit(&self) -> Result<Option<usize>> {
+    pub fn limit(&self) -> Result<usize> {
         match *self {
             Resource::Memory | Resource::OsMemory => {
                 let path = "/sys/fs/cgroup/memory/memory.limit_in_bytes";
-                read_file_usize(Path::new(path)).map(Some)
+                read_file_usize(Path::new(path))
             }
             Resource::AllocatorMemory => {
-                Ok(None)
+                Err(ErrorKind::NotApplicable("limit", self.clone()).into())
             }
             Resource::__Private => {
                 unreachable!("Do not use Resource::__Private")
@@ -122,8 +130,7 @@ impl Resource {
         match *self {
             Resource::Memory => {
                 let os_used = Resource::OsMemory.used()?;
-                let alloc_avail = Resource::AllocatorMemory.available()?
-                    .expect("AllocatorMemory::available should return Some");
+                let alloc_avail = Resource::AllocatorMemory.available()?;
                 Ok(os_used - alloc_avail)
             }
             Resource::AllocatorMemory => {
@@ -141,27 +148,22 @@ impl Resource {
 
     /// How much of the resource is available to the process but not yet used?
     /// Returns `Ok(None)` if the resource in question appears to be unlimited.
-    pub fn available(&self) -> Result<Option<usize>> {
+    pub fn available(&self) -> Result<usize> {
         match *self {
             Resource::Memory => {
-                let os_avail = Resource::OsMemory.available()?
-                    .expect("OsMemory::available should return Some");
-                let alloc_avail = Resource::AllocatorMemory.available()?
-                    .expect("AllocatorMemory::available should return Some");
-                Ok(Some(os_avail + alloc_avail))
+                let os_avail = Resource::OsMemory.available()?;
+                let alloc_avail = Resource::AllocatorMemory.available()?;
+                Ok(os_avail + alloc_avail)
             }
             Resource::AllocatorMemory => {
                 let reserved = allocator_stats::reserved()?;
                 let used = allocator_stats::used()?;
-                Ok(Some(reserved - used))
+                Ok(reserved - used)
             }
             _ => {
-                if let Some(l) = self.limit()? {
-                    let u = self.used()?;
-                    Ok(Some(l - u))
-                } else {
-                    Ok(None)
-                }
+                let l = self.limit()?;
+                let u = self.used()?;
+                Ok(l - u)
             }
         }
     }

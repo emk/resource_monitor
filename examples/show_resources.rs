@@ -13,9 +13,9 @@ fn run() -> Result<()> {
         &[Resource::Memory, Resource::OsMemory, Resource::AllocatorMemory];
     for res in resources {
         println!("{:?}:", res);
-        println!("  limit: {:?}", res.limit()?);
-        println!("  used: {:?}", res.used()?);
-        println!("  available: {:?}", res.available()?);
+        println!("  limit: {:?}", res.limit());
+        println!("  used: {:?}", res.used());
+        println!("  available: {:?}", res.available());
     }
     Ok(())
 }

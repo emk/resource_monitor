@@ -9,7 +9,7 @@ use resource_monitor::{Resource, Result};
 fn run() -> Result<()> {
     let mut used_memory = vec![];
     loop {
-        let avail = Resource::Memory.available()?.unwrap();
+        let avail = Resource::Memory.available()?;
         println!("Available: {}", avail);
         if avail < 10_000_000 {
             break;
@@ -25,8 +25,7 @@ fn run() -> Result<()> {
     }
     println!("Clearing");
     drop(used_memory);
-    let avail = Resource::Memory.available()?.unwrap();
-    println!("Available: {}", avail);
+    println!("Available: {}", Resource::Memory.available()?);
     Ok(())
 }
 
