@@ -9,13 +9,14 @@ use resource_monitor::{Resource, Result};
 
 /// List all our resources.
 fn run() -> Result<()> {
-    let res = Resource::Memory;
-    println!("Memory:");
-    println!("  limit: {}", res.limit()?);
-    println!("  used: {}", res.used()?);
-    println!("  available: {}", res.available()?);
-
-    // Nothing went wrong, so return `Ok`.
+    let resources =
+        &[Resource::Memory, Resource::OsMemory, Resource::AllocatorMemory];
+    for res in resources {
+        println!("{:?}:", res);
+        println!("  limit: {:?}", res.limit()?);
+        println!("  used: {:?}", res.used()?);
+        println!("  available: {:?}", res.available()?);
+    }
     Ok(())
 }
 

@@ -5,3 +5,4 @@ authors = ["Eric Kidd <git@randomhacks.net>"]
 
 [dependencies]
 error-chain = "0.7"
+libc = "0.2.19"

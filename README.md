@@ -1,8 +1,9 @@
 # `resource_monitor`: Check resources available to the current process
 
 Right now, we only support checking the available RAM on a Linux system
-using cgroups. This should work inside a Docker container, or outside
-of a container on at least Ubuntu 16.04.
+using cgroups, and we require your Rust code to use jemalloc. This should
+work inside a Docker container, or outside of a container on at least
+Ubuntu 16.04.
 
 ```rust
 let res = resource_monitor::Resource::Memory;
@@ -40,6 +41,14 @@ To build:
 git clone https://github.com/emk/resource_monitor.git
 cd resource_monitor
 cargo build
+```
+
+## To test what happens when memory is exhausted
+
+Install Docker and run:
+
+```sh
+./test.sh
 ```
 
 ## Reading the code

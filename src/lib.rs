@@ -7,9 +7,9 @@
 //! ```
 //! let res = resource_monitor::Resource::Memory;
 //! println!("Memory:");
-//! println!("  limit: {}", res.limit().unwrap());
-//! println!("  used: {}", res.used().unwrap());
-//! println!("  available: {}", res.available().unwrap());
+//! println!("  limit: {:?}", res.limit().unwrap());
+//! println!("  used: {:?}", res.used().unwrap());
+//! println!("  available: {:?}", res.available().unwrap());
 //! ```
 //!
 //! Patches to add new resource types and new kinds of limits (`getrlimit`,
@@ -23,6 +23,7 @@
 
 #[macro_use]
 extern crate error_chain;
+extern crate libc;
 
 use std::fs;
 use std::io::prelude::*;
@@ -57,8 +58,11 @@ mod errors {
     }
 }
 
+pub use allocator_stats::{allocator_stats_enabled, print_allocator_stats};
+mod allocator_stats;
+
 /// Read a file containing an integer.
-fn read_file_u64(path: &Path) -> Result<u64> {
+fn read_file_usize(path: &Path) -> Result<usize> {
     // Declare a helper function to create an error wrapper containing
     // the path we were trying to read, or our callers will hate us.
     let mkerr = || ErrorKind::File(path.to_owned());
@@ -75,10 +79,20 @@ fn read_file_u64(path: &Path) -> Result<u64> {
 
 /// Types of resource we can monitor.  This type may be extended with
 /// new variants; do not attempt to exhaustively match against it.
+///
+/// Note that `r.used() + r.available()` may not equal `r.limit()`.
+/// There are various estimates and bookkeeping overhead taking place
+/// under the hood.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Resource {
-    /// RAM in bytes.
+    /// Total RAM in bytes, including both RAM available at the OS level, and
+    /// RAM which has been reserved by the heap allocator and not used.
     Memory,
+    /// Heap allocator RAM in bytes.  This does not generally support `limit`.
+    AllocatorMemory,
+    /// OS memory, in bytes. Some of the RAM shown as `used` here may still
+    /// be available from the heap allocator.
+    OsMemory,
     /// A private internal variant to allow future extensibility.
     #[doc(hidden)]
     __Private,
@@ -86,11 +100,16 @@ pub enum Resource {
 
 impl Resource {
     /// What is the maximum amount of the resource this process may consume?
-    pub fn limit(&self) -> Result<u64> {
+    /// This will return `Ok(None)` if there is no limit imposed by this
+    /// particular subsystem.
+    pub fn limit(&self) -> Result<Option<usize>> {
         match *self {
-            Resource::Memory => {
+            Resource::Memory | Resource::OsMemory => {
                 let path = "/sys/fs/cgroup/memory/memory.limit_in_bytes";
-                read_file_u64(Path::new(path))
+                read_file_usize(Path::new(path)).map(Some)
+            }
+            Resource::AllocatorMemory => {
+                Ok(None)
             }
             Resource::__Private => {
                 unreachable!("Do not use Resource::__Private")
@@ -99,11 +118,20 @@ impl Resource {
     }
 
     /// What is the current amount of the resource consumed by this process?
-    pub fn used(&self) -> Result<u64> {
+    pub fn used(&self) -> Result<usize> {
         match *self {
             Resource::Memory => {
+                let os_used = Resource::OsMemory.used()?;
+                let alloc_avail = Resource::AllocatorMemory.available()?
+                    .expect("AllocatorMemory::available should return Some");
+                Ok(os_used - alloc_avail)
+            }
+            Resource::AllocatorMemory => {
+                allocator_stats::used()
+            }
+            Resource::OsMemory => {
                 let path = "/sys/fs/cgroup/memory/memory.usage_in_bytes";
-                read_file_u64(Path::new(path))
+                read_file_usize(Path::new(path))
             }
             Resource::__Private => {
                 unreachable!("Do not use Resource::__Private")
@@ -112,9 +140,29 @@ impl Resource {
     }
 
     /// How much of the resource is available to the process but not yet used?
-    pub fn available(&self) -> Result<u64> {
-        let l = self.limit()?;
-        let u = self.used()?;
-        if u > l { Ok(0) } else { Ok(l - u) }
+    /// Returns `Ok(None)` if the resource in question appears to be unlimited.
+    pub fn available(&self) -> Result<Option<usize>> {
+        match *self {
+            Resource::Memory => {
+                let os_avail = Resource::OsMemory.available()?
+                    .expect("OsMemory::available should return Some");
+                let alloc_avail = Resource::AllocatorMemory.available()?
+                    .expect("AllocatorMemory::available should return Some");
+                Ok(Some(os_avail + alloc_avail))
+            }
+            Resource::AllocatorMemory => {
+                let reserved = allocator_stats::reserved()?;
+                let used = allocator_stats::used()?;
+                Ok(Some(reserved - used))
+            }
+            _ => {
+                if let Some(l) = self.limit()? {
+                    let u = self.used()?;
+                    Ok(Some(l - u))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
     }
 }

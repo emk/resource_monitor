@@ -1,0 +1,8 @@
+# Used for testing.
+version: "2"
+services:
+  test:
+    image: "resource_monitor_test"
+    build: "."
+    mem_limit: "100MB"
+    command: ["./use_all_memory"]
